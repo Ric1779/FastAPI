@@ -5,6 +5,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from schemas import PostCreate, PostResponse
+
 app = FastAPI()
 
 # first argument is the url path where the static files will be accessible
@@ -31,7 +33,10 @@ posts: list[dict] = [
     },
 ]
 
-# `request` represents the incoming HTTP request (headers, URL, client info, etc.)
+# ----------------------------------- HTML ENDPOINTS -----------------------------------
+
+# Request represents the entire incoming HTTP request — everything the client (browser, API call, etc.) sent to your server.
+# So it's basically your handle to the outside world.
 # It is required by TemplateResponse to provide context to the HTML template
 # (e.g., URL generation, accessing request data inside the template)
 @app.get("/", include_in_schema=False, name="home")
@@ -51,11 +56,27 @@ def post_page(request: Request, post_id: int):
             )
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
-@app.get("/api/posts")
+
+# ----------------------------------- API ENDPOINTS -----------------------------------
+
+@app.post("/api/posts", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
+def create_post(post: PostCreate):
+    new_id = max(p["id"] for p in posts) + 1 if posts else 1
+    new_post = {
+        "id": new_id,
+        "author": post.author,
+        "title": post.title,
+        "content": post.content,
+        "date_posted": "April 3, 2025",
+    }
+    posts.append(new_post)
+    return new_post
+
+@app.get("/api/posts", response_model=list[PostResponse])
 def get_posts():
     return posts     # fastapi automatically converts the list of dictionary into a json array
 
-@app.get("/api/posts/{post_id}")
+@app.get("/api/posts/{post_id}", response_model=PostResponse)
 def get_post(post_id: int):
     for post in posts:
         if post.get("id") == post_id:
