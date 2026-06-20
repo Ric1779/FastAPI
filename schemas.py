@@ -1,15 +1,40 @@
-from pydantic import BaseModel, ConfigDict, Field
+# pydantic is used by fastapi for validation, documentation, and serialization
+
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+
+# ----------------------------------- User Model -----------------------------------
+
+class UserBase(BaseModel):
+    username: str = Field(min_length=1, max_length=50)
+    email: EmailStr = Field(max_length=120)
+
+class UserCreate(UserBase):
+    pass
+
+class UserResponse(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    image_file: str | None
+    image_path: str
+
+
+# ----------------------------------- Post Model -----------------------------------
 
 class PostBase(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     content: str = Field(min_length=1)
-    author: str = Field(min_length=1, max_length=50)
 
 class PostCreate(PostBase):
-    pass
+    user_id: int  # TEMPORARY
 
 class PostResponse(PostBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    date_posted: str
+    user_id: int
+    date_posted: datetime  # will get serialized to the standard ISO8601 format automatically
+    author: UserResponse
