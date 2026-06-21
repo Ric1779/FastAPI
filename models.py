@@ -8,6 +8,32 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 
 
+# back_populates is purely an in-memory convenience, it has nothing to do with the database. 
+# The database only cares about user_id (the foreign key). back_populates just tells SQLAlchemy 
+# "when you update one side, please update the other side too, right now, in Python, without 
+# waiting for a DB round-trip".
+
+# class User(Base):
+#     posts: Mapped[list[Post]] = relationship(back_populates="author")
+#     #             ^^^^^^^^^^
+#     #             "this side is a list, so I manage a collection"
+
+# class Post(Base):
+#     author: Mapped[User] = relationship(back_populates="posts")
+#     #              ^^^^
+#     #             Step 1: "the other model is User"
+#     #                                                 ^^^^^
+#     #                                                 Step 2: "the attribute to sync is called 'posts'"
+# When you do post.author = alice, SQLAlchemy thinks:
+
+# "The mirror of author is called posts" - from back_populates="posts"
+# "Let me go look at User.posts"
+# "It's Mapped[list[Post]] — a collection, so I should append, not overwrite"
+# Appends post to alice.posts
+
+# If it were Mapped[Post] (no list), it would assign instead of append. So yes, 
+# the list in the type hint is exactly what drives that decision.
+
 class User(Base):
     __tablename__ = "users"
 
