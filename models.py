@@ -8,6 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 
 
+# Notes: back_populates in database models
+#
 # back_populates is purely an in-memory convenience, it has nothing to do with the database. 
 # The database only cares about user_id (the foreign key). back_populates just tells SQLAlchemy 
 # "when you update one side, please update the other side too, right now, in Python, without 
