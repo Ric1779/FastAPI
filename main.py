@@ -80,6 +80,7 @@ def user_posts_page(
 
 # ----------------------------------- API ENDPOINTS -----------------------------------
 
+# users endpoints
 
 @app.post("/api/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Annotated[Session, Depends(get_db)]):
@@ -125,7 +126,22 @@ def get_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
 # allows FastAPI and Pydantic to automatically serialize the ORM object into the JSON response.
 
 
-# users endpoints
+## delete_user
+@app.delete("/api/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.User).where(models.User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    db.delete(user)
+    db.commit()
+
+
+# users posts endpoints
 
 @app.get("/api/users/{user_id}/posts", response_model=list[PostResponse])
 def get_user_posts(user_id: int, db: Annotated[Session, Depends(get_db)]):
