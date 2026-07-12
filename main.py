@@ -17,6 +17,11 @@ import models
 from database import Base, engine, get_db
 from routers import posts, users
 
+import mimetypes
+
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("text/css", ".css")  # optional, same class of issue
+
 # ----------------------------------- APP SETUP -----------------------------------
 
 @asynccontextmanager
@@ -53,7 +58,9 @@ app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 @app.get("/", include_in_schema=False, name="home")
 @app.get("/posts", include_in_schema=False, name="posts")
 async def home(request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(select(models.Post).options(selectinload(models.Post.author)))
+    result = await db.execute(
+        select(models.Post).options(selectinload(models.Post.author)).order_by(models.Post.date_posted.desc())
+        )
     posts = result.scalars().all()
     return templates.TemplateResponse(request, "home.html", {"posts": posts, "title": "Home"})
 
