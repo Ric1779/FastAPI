@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 import models
 from database import Base, engine, get_db
-from schemas import PostCreate, PostResponse, UserCreate, UserResponse, PostUpdate, UserUpdate
+from schemas import PostCreate, PostResponse, PostUpdate
 
 router = APIRouter()
 
@@ -36,7 +36,9 @@ async def create_post(post: PostCreate, db: Annotated[AsyncSession, Depends(get_
 @router.get("", response_model=list[PostResponse])
 async def get_posts(db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(select(
-        models.Post).options(selectinload(models.Post.author)).order_by(models.Post.date_posted.desc())
+        models.Post)
+        .options(selectinload(models.Post.author))
+        .order_by(models.Post.date_posted.desc())
         )
     posts = result.scalars().all()
     return posts     # fastapi automatically converts the (list of dictionary)/python-object into a json array

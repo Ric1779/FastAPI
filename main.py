@@ -49,11 +49,13 @@ app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 
 # ----------------------------------- HTML ENDPOINTS -----------------------------------
 
-# Request represents the entire incoming HTTP request — everything the client (browser, API call, etc.) sent to your server.
+# Note: Request represents the entire incoming HTTP request — everything the client (browser, API call, etc.) sent to your server.
 # So it's basically your handle to the outside world.
 # It is required by TemplateResponse to provide context to the HTML template
 # (e.g., URL generation, accessing request data inside the template)
 
+# Note: functions like home, post_page, user_posts_page are called 
+# "route handlers" or "view functions" or "endpoint functions" or "path operation functions"
 
 @app.get("/", include_in_schema=False, name="home")
 @app.get("/posts", include_in_schema=False, name="posts")
@@ -93,7 +95,12 @@ async def user_posts_page(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    result = await db.execute(select(models.Post).options(selectinload(models.Post.author)).where(models.Post.user_id == user_id))
+    result = await db.execute(
+        select(models.Post)
+        .options(selectinload(models.Post.author))
+        .where(models.Post.user_id == user_id)
+        .order_by(models.Post.date_posted.desc())
+        )
     posts = result.scalars().all()
     return templates.TemplateResponse(
         request,
@@ -101,6 +108,24 @@ async def user_posts_page(
         {"posts": posts, "user": user, "title": f"{user.username}'s Posts"},
     )
 
+
+## login and register template_routes
+@app.get("/login", include_in_schema=False)
+async def login_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "login.html",
+        {"title": "Login"},
+    )
+
+
+@app.get("/register", include_in_schema=False)
+async def register_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "register.html",
+        {"title": "Register"},
+    )
 
 # ----------------------------------- Exception Handlers -----------------------------------
 
