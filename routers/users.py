@@ -20,11 +20,10 @@ from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
 
 from auth import (
-    create_access_token, 
-    verify_access_token, 
+    CurrentUser,
+    create_access_token,  
     hash_password, 
-    verify_password, 
-    oauth2_scheme,
+    verify_password,
 )
 
 from config import settings
@@ -106,40 +105,9 @@ async def login_for_access_token(
 
 ## get_current_user
 @router.get("/me", response_model=UserPrivate)
-async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-):
+async def get_current_user(current_user: CurrentUser):
     """Get the currently authenticated user."""
-    user_id = verify_access_token(token)
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Validate user_id is a valid integer (defense against malformed JWT)
-    try:
-        user_id_int = int(user_id)
-    except (TypeError, ValueError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    result = await db.execute(
-        select(models.User).where(models.User.id == user_id_int),
-    )
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return user
+    return current_user
 
 
 @router.get("/{user_id}", response_model=UserPublic)
@@ -158,21 +126,6 @@ async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
 # allows FastAPI and Pydantic to automatically serialize the ORM object into the JSON response.
 
 
-## delete_user
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(select(models.User).where(models.User.id == user_id))
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-
-    await db.delete(user)
-    await db.commit()
-
-
 # users posts endpoints
 @router.get("/{user_id}/posts", response_model=list[PostResponse])
 async def get_user_posts(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
@@ -189,24 +142,56 @@ async def get_user_posts(user_id: int, db: Annotated[AsyncSession, Depends(get_d
     posts = result.scalars().all()
     return posts
 
+
 @router.patch("/{user_id}", response_model=UserPrivate)
-async def update_user(user_id: int, user_update: UserUpdate, db: Annotated[AsyncSession, Depends(get_db)]):
+async def update_user(
+    user_id: int,
+    user_update: UserUpdate,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    if user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="not authorized to update this user."
+        )
+
     result = await db.execute(select(models.User).where(models.User.id == user_id))
     user = result.scalars().first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
     
-    if user_update.username is not None and user_update.username.lower() != user.username.lower():
-        result = await db.execute(select(models.User).where(func.lower(models.User.username) == user_update.username.lower()))
+    if (
+        user_update.username is not None 
+        and user_update.username.lower() != user.username.lower()
+    ):
+        result = await db.execute(
+            select(models.User).where(
+                func.lower(models.User.username) == user_update.username.lower(),
+            ),
+        )
         existing_user = result.scalars().first()
         if existing_user:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User already exists",
+            )
         
     if user_update.email is not None and user_update.email.lower() != user.email.lower():
-        result = await db.execute(select(models.User).where(func.lower(models.User.email) == user_update.email.lower()))
+        result = await db.execute(
+            select(models.User).where(
+                func.lower(models.User.email) == user_update.email.lower(),
+            ),
+        )
         existing_email = result.scalars().first()
         if existing_email:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
     
     # Note: the below is different from how its done for post patch endpoint, just a different way of implementation
     if user_update.username is not None:
@@ -224,3 +209,28 @@ async def update_user(user_id: int, user_update: UserUpdate, db: Annotated[Async
     await db.commit()
     await db.refresh(user)
     return user
+
+
+## delete_user
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: int,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    if user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="not authorized to delete this user."
+        )
+    
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    await db.delete(user)
+    await db.commit()
