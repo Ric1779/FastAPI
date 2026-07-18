@@ -54,3 +54,10 @@ class PostResponse(PostBase):
     user_id: int
     date_posted: datetime  # will get serialized to the standard ISO8601 format automatically
     author: UserPublic
+
+class PaginatedPostsResponse(BaseModel):
+    posts: list[PostResponse]
+    total: int
+    skip: int
+    limit: int
+    has_more: bool
