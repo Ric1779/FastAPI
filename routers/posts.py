@@ -10,6 +10,7 @@ from database import Base, engine, get_db
 from schemas import PostCreate, PostResponse, PostUpdate, PaginatedPostsResponse
 
 from auth import CurrentUser
+from config import settings
 
 router = APIRouter()
 
@@ -37,7 +38,7 @@ async def create_post(
 async def get_posts(
     db: Annotated[AsyncSession, Depends(get_db)],
     skip: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1, le=100)] = 10,
+    limit: Annotated[int, Query(ge=1, le=100)] = settings.posts_per_page,
 ):
 
     count_result = await db.execute(select(func.count()).select_from(models.Post))
