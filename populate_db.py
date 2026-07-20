@@ -6,7 +6,7 @@ import httpx
 from sqlalchemy import delete, select, update
 
 import models
-from database import AsyncSessionLocal, engine
+from database import AsyncSessionLocal, Base, engine
 from image_utils import PROFILE_PICS_DIR
 from main import app
 
@@ -243,6 +243,7 @@ async def clear_existing_data() -> None:
 
     # Clear database tables (order respects foreign keys)
     async with AsyncSessionLocal() as db:
+        await db.execute(delete(models.PasswordResetToken))
         await db.execute(delete(models.Post))
         await db.execute(delete(models.User))
         await db.commit()
@@ -251,7 +252,7 @@ async def clear_existing_data() -> None:
 
 async def update_post_dates() -> None:
     now = datetime.now(UTC)
-
+    
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(models.Post).order_by(models.Post.id))
         posts = result.scalars().all()
@@ -282,6 +283,10 @@ async def update_post_dates() -> None:
 
 
 async def populate() -> None:
+    # Ensure all tables exist (e.g. password_reset_tokens added after blog.db was created)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     transport = httpx.ASGITransport(app=app)
 
     async with httpx.AsyncClient(
