@@ -86,6 +86,7 @@ async def home(request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
         },
     )
 
+
 @app.get("/posts/{post_id}", include_in_schema=False)
 async def post_page(request: Request, post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(select(models.Post).options(selectinload(models.Post.author)).where(models.Post.id == post_id))
@@ -98,6 +99,7 @@ async def post_page(request: Request, post_id: int, db: Annotated[AsyncSession, 
             {"post": post, "title": title},
         )
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
 
 @app.get("/users/{user_id}/posts", include_in_schema=False, name="user_posts")
 async def user_posts_page(
@@ -147,6 +149,7 @@ async def register_page(request: Request):
         {"title": "Register"},
     )
 
+
 @app.get("/account", include_in_schema=False)
 async def account_page(request: Request):
     return templates.TemplateResponse(
@@ -154,6 +157,27 @@ async def account_page(request: Request):
         "account.html",
         {"title": "Account"},
     )
+
+
+@app.get("/forgot-password", include_in_schema=False)
+async def forgot_password_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "forgot_password.html",
+        {"title": "Forgot Password"},
+    )
+
+
+@app.get("/reset-password", include_in_schema=False)
+async def reset_password_page(request: Request):
+    response = templates.TemplateResponse(
+        request,
+        "reset_password.html",
+        {"title": "Reset Password"},
+    )
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
 
 # ----------------------------------- Exception Handlers -----------------------------------
 

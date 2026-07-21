@@ -14,6 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from database import get_db
 
+import hashlib
+import secrets # python's module for generating secure random values
+
 password_hash = PasswordHash.recommended() # Creates a password hasher with argon2 using the recommended settings
 
 # extracts the token from the authorization header
@@ -24,6 +27,12 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return password_hash.verify(plain_password, hashed_password)
+
+def generate_reset_token() -> str:
+    return secrets.token_urlsafe(32)
+
+def hash_reset_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """Create a JWT access token"""
