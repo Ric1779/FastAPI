@@ -82,3 +82,9 @@ This repo is my walkthrough of [Corey Schafer's FastAPI tutorial series](https:/
 - Query parameters for pagination
 - Loading more posts from the UI
 - Seeding the database with sample data
+
+### 14. Password Reset : Email, Tokens, and Background Tasks
+
+- Forgot / reset password flow
+- Email sending and reset tokens
+- Background tasks for email delivery
