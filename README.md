@@ -88,3 +88,9 @@ This repo is my walkthrough of [Corey Schafer's FastAPI tutorial series](https:/
 - Forgot / reset password flow
 - Email sending and reset tokens
 - Background tasks for email delivery
+
+### 15. PostgreSQL and Alembic : Database Migrations for Production
+
+- Moving from SQLite to PostgreSQL
+- Schema migrations with Alembic
+- Evolving the database safely

@@ -1,5 +1,11 @@
 from contextlib import asynccontextmanager
 from typing import Annotated
+import asyncio
+import sys
+
+# psycopg async does not support Windows ProactorEventLoop
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
 
@@ -14,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
-from database import Base, engine, get_db
+from database import engine, get_db
 from routers import posts, users
 
 import mimetypes
@@ -29,8 +35,6 @@ mimetypes.add_type("text/css", ".css")  # optional, same class of issue
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Startup
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all) # Idempotent : we can multiple times, won't have any side-effects if the tables already exist
     yield
     # Shutdown
     await engine.dispose()
