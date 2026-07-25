@@ -46,8 +46,6 @@ app = FastAPI(lifespan=lifespan)
 # name that is used to reference in templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-app.mount("/media", StaticFiles(directory="media"), name="media")
-
 templates = Jinja2Templates(directory="templates")
 
 app.include_router(users.router, prefix="/api/users", tags=["users"])
